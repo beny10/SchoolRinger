@@ -31,7 +31,7 @@ int RTC_init()
 int getDayOfWeek()
 {
   int dayOfWeek = 0;
-  int savedYear = 2016;
+  int savedYear = 16;
   int savedDaysOfMonths[] = { 5, 1, 2, 5, 7, 3, 5, 1, 4, 6, 2, 4 };
   //the first day of 2016 was on friday
   int passedYears = RtcYear - savedYear;
