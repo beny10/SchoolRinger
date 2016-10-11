@@ -198,5 +198,5 @@ void loop()
       Ring();
     }
   }
-  delay(1000);
+  delay(500);
 }
