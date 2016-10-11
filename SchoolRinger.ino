@@ -3,7 +3,7 @@ const int  cs = 9;
 #define SOUND_INTERVAL 2000
 #define RELAY_PIN 6
 #include <virtuabotixRTC.h>
-int ringingTime[][3] = {{8, 0, 0}, {8, 50, 0}, {9, 0, 0}, {9, 50, 0}, {10, 0, 0}, {10, 50, 0}, {11, 10, 0}, {12, 0, 0}, {12, 10, 0}, {13, 0, 0}, {13, 10, 0}, {13, 59, 0}};
+int ringingTime[][3] = {{8, 0, 0}, {8, 50, 0}, {9, 0, 0}, {9, 50, 0}, {10, 0, 0}, {10, 50, 0}, {11, 10, 0}, {12, 0, 0}, {12, 10, 0}, {13, 0, 0}, {13, 10, 0}, {13, 59, 0}};//13:59 "sa prinda elevii conventia"
 //int ringingTime[][3]={{21,30,00},{21,32,0}};
 int ringingCount = 12;
 int statusLedPin = 8;
@@ -121,6 +121,7 @@ bool isOraVara(int month, int day, int dayOfWeek)
   }
   else if (month == 3)
   {
+    isOraVara=false;
     if (day > 24)
     {
       isOraVara = true;
@@ -132,6 +133,7 @@ bool isOraVara(int month, int day, int dayOfWeek)
   }
   else if (month == 10)
   {
+    isOraVara=true;
     if (day > 24)
     {
       isOraVara = false;
@@ -155,7 +157,13 @@ void loop()
   if (isOraVara(RtcMonth, RtcDay, RtcDayOfWeek))
   {
     RtcHour++;
+    Serial.print(1);
   }
+  else
+  {
+    Serial.print(0);
+  }
+  Serial.print(" ");
   Serial.print(RtcYear);
   Serial.print("/");
   Serial.print(RtcMonth);
