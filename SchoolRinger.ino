@@ -1,8 +1,8 @@
 #include "Wire.h"
 #define DS3231_I2C_ADDRESS 0x68
 #define DISPLAY_REFRESH_RATE 1
-#define MODE_CHANGE_BUTTON 3
-#define VALUE_CHANGE_BUTTON 2
+#define MODE_CHANGE_BUTTON A2
+#define VALUE_CHANGE_BUTTON A1
 #define SOUND_INTERVAL 2000
 #define RELAY_PIN A0
 int ringingTime[][3] = {{8, 0, 0}, {8, 50, 0}, {9, 0, 0}, {9, 50, 0}, {10, 0, 0}, {10, 50, 0}, {11, 10, 0}, {12, 0, 0}, {12, 10, 0}, {13, 0, 0}, {13, 10, 0}, {13, 59, 0}};//13:59 "sa prinda elevii conventia"
@@ -28,13 +28,13 @@ byte bcdToDec(byte val)
 {
   return ( (val / 16 * 10) + (val % 16) );
 }
-int d0 = 8;
-int d1 = 9;
-int d2 = 10;
-int d3 = 11;
-int firstCharcter = 4;
-int secondCharcter = 5;
-int thirdCharcter = 6;
+int d0 = 5;
+int d1 = 8;
+int d2 = 7;
+int d3 =6;
+int firstCharcter = 2;
+int secondCharcter = 3;
+int thirdCharcter = 4;
 char numbersInBinary[][4] = {"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001"};
 void setup() {
   pinMode(firstCharcter, OUTPUT);
