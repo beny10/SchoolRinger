@@ -1,6 +1,6 @@
 #include "Clock.h"
 
-void Clock::InitClock(int cs)
+Clock::Clock(int cs)
 {
 #ifdef DS3234
 
