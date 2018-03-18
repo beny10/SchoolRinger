@@ -14,6 +14,7 @@ class Clock
 {
 public:
 	Clock(int cs);
+	void InitClock();
 	void UpdateTimeDate();
 	void SetTime();
 	bool IsOraVara(int month, int day, int dayOfWeek);

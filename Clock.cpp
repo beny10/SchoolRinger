@@ -2,12 +2,17 @@
 
 Clock::Clock(int cs)
 {
-#ifdef DS3234
-
 	_cs = cs;
 
+}
+
+void Clock::InitClock()
+{
+#ifdef DS3234
+
+
 	pinMode(_cs, OUTPUT); // chip select
-						 // start the SPI library:
+						  // start the SPI library:
 	SPI.begin();
 	SPI.setBitOrder(MSBFIRST);
 	SPI.setDataMode(SPI_MODE3); // both mode 1 & 3 should work
