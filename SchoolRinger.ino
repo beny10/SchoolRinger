@@ -38,14 +38,17 @@ byte bcdToDec(byte val)
 Clock clock(CS);
 Display display(D0, D1, D2, D3, FIRST_CHARACTER, SECOND_CHARACTER, THIRD_CHARACTER, LATCH);
 
+
 void setup() {
-  
+
+  clock.InitClock();
   pinMode(MODE_CHANGE_BUTTON, INPUT_PULLUP);
   pinMode(VALUE_CHANGE_BUTTON, INPUT_PULLUP);
 
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   Serial.begin(9600);
+
 }
 
 
@@ -194,6 +197,7 @@ void checkProgramModeButtons()
 }
 void loop()
 {
+
   checkProgramModeButtons();
   if (isInProgrammingMode == 1)
   {
@@ -222,7 +226,4 @@ void loop()
   }
 }
 
-ISR(TIMER0_COMPA_vect) {//timer0 interrupt 2kHz toggles pin 8
-            //generates pulse wave of frequency 2kHz/2 = 1kHz (takes two cycles for full wave- toggle high then toggle low)
-  display.PrintNumber(123);
-}
+

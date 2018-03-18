@@ -36,6 +36,9 @@ Display::Display(char d0,
 	digitalWrite(_secondCharacter, HIGH);
 	digitalWrite(_thirdCharacter, HIGH);
 	digitalWrite(_latch, LOW);
+
+
+
 }
 
 void Display::PrintDigit(int number)
