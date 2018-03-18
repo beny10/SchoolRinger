@@ -1,4 +1,4 @@
-
+#include "Display.h"
 #include "Clock.h"
 #define DS3231_I2C_ADDRESS 0x68
 #define DISPLAY_REFRESH_RATE 5000
@@ -24,117 +24,31 @@ byte bcdToDec(byte val)
 {
   return ( (val / 16 * 10) + (val % 16) );
 }
-int latch = 2;
-int d0 = A4;
-int d1 = 4;
-int d2 = 3;
-int d3 = A5;
-int firstCharcter = 6;
-int secondCharcter = 7;
-int thirdCharcter = 8;
-char numbersInBinary[][4] = {"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001"};
+#define LATCH 2
+#define D0 A4
+#define D1 4
+#define D2 3
+#define D3 A5
+#define FIRST_CHARACTER 6
+#define SECOND_CHARACTER 7
+#define THIRD_CHARACTER 8
 
-Clock clock;
+
+
+Clock clock(CS);
+Display display(D0, D1, D2, D3, FIRST_CHARACTER, SECOND_CHARACTER, THIRD_CHARACTER, LATCH);
 
 void setup() {
-  clock.InitClock(CS);
-
-  pinMode(firstCharcter, OUTPUT);
-  pinMode(secondCharcter, OUTPUT);
-  pinMode(thirdCharcter, OUTPUT);
-  pinMode(latch, OUTPUT);
-  pinMode(d0, OUTPUT);
-  pinMode(d1, OUTPUT);
-  pinMode(d2, OUTPUT);
-  pinMode(d3, OUTPUT);
-  digitalWrite(firstCharcter, HIGH);
-  digitalWrite(secondCharcter, HIGH);
-  digitalWrite(thirdCharcter, HIGH);
-  digitalWrite(latch, LOW);
-
+  
   pinMode(MODE_CHANGE_BUTTON, INPUT_PULLUP);
   pinMode(VALUE_CHANGE_BUTTON, INPUT_PULLUP);
-
-
-
-
 
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   Serial.begin(9600);
 }
-void printOneNumber(int number)
-{
-  digitalWrite(d0, numbersInBinary[number][3] - 48);
-  digitalWrite(d1, numbersInBinary[number][2] - 48);
-  digitalWrite(d2, numbersInBinary[number][1] - 48);
-  digitalWrite(d3, numbersInBinary[number][0] - 48);
 
-  digitalWrite(latch, LOW);
-  digitalWrite(latch, HIGH);
-}
-void printCharacter(char c)
-{
-  switch (c)
-  {
-    case '0':
-      printOneNumber(0);
-      break;
-    case '1':
-      printOneNumber(1);
-      break;
-    case '2':
-      printOneNumber(2);
-      break;
-    case '3':
-      printOneNumber(3);
-      break;
-    case '4': case 'y':
-      printOneNumber(4);
-      break;
-    case '5': case 's':
-      printOneNumber(5);
-      break;
-    case '6':
-      printOneNumber(6);
-      break;
-    case '7':
-      printOneNumber(7);
-      break;
-    case '8':
-      printOneNumber(8);
-      break;
-    case '9':
-      printOneNumber(9);
-      break;
-  }
-}
-void printText(char text[])
-{
-  printCharacter(text[0]);
-  digitalWrite(firstCharcter, LOW);
-  delayMicroseconds(DISPLAY_REFRESH_RATE);
-  printCharacter(text[1]);
-  digitalWrite(firstCharcter, HIGH);
 
-  digitalWrite(secondCharcter, LOW);
-  printCharacter(text[1]);
-  delayMicroseconds(DISPLAY_REFRESH_RATE);
-  printCharacter(text[2]);
-  digitalWrite(secondCharcter, HIGH);
-
-  digitalWrite(thirdCharcter, LOW);
-  delayMicroseconds(DISPLAY_REFRESH_RATE);
-  digitalWrite(thirdCharcter, HIGH);
-}
-void printNumber(int number)
-{
-  char text[3];
-  text[2] = number % 10 + 48;
-  text[1] = number / 10 % 10 + 48;
-  text[0] = number / 100 % 10 + 48;
-  printText(text);
-}
 
 void Ring()
 {
@@ -197,7 +111,7 @@ void programWizard(int progStep)
   int toDisplay ;
   toDisplay = getProgramWizardValue(progStep);
   toDisplay = progStep * 100 + toDisplay;
-  printNumber(toDisplay);
+  display.PrintNumber(toDisplay);
 }
 void programWizardValueIncremented(int progStep, int step)
 {
@@ -262,7 +176,7 @@ void checkProgramModeButtons()
       int count = 0;
       while (count++ < 100)
       {
-        printText("888");
+        display.PrintNumber(888);
       }
       delay(1000);
       Serial.println("mode");
@@ -306,4 +220,9 @@ void loop()
     }
     delay(1000);
   }
+}
+
+ISR(TIMER0_COMPA_vect) {//timer0 interrupt 2kHz toggles pin 8
+            //generates pulse wave of frequency 2kHz/2 = 1kHz (takes two cycles for full wave- toggle high then toggle low)
+  display.PrintNumber(123);
 }

@@ -13,7 +13,7 @@
 class Clock
 {
 public:
-	void InitClock(int cs);
+	Clock(int cs);
 	void UpdateTimeDate();
 	void SetTime();
 	bool IsOraVara(int month, int day, int dayOfWeek);
