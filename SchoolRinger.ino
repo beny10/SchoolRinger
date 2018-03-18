@@ -1,20 +1,16 @@
-#include "Wire.h"
+
+#include "Clock.h"
 #define DS3231_I2C_ADDRESS 0x68
-#define DISPLAY_REFRESH_RATE 1
+#define DISPLAY_REFRESH_RATE 5000
 #define MODE_CHANGE_BUTTON A2
-#define VALUE_CHANGE_BUTTON A1
+#define VALUE_CHANGE_BUTTON A3
 #define SOUND_INTERVAL 2000
-#define RELAY_PIN A0
+#define RELAY_PIN 9
+#define CS  10
 int ringingTime[][3] = {{8, 0, 0}, {8, 50, 0}, {9, 0, 0}, {9, 50, 0}, {10, 0, 0}, {10, 50, 0}, {11, 10, 0}, {12, 0, 0}, {12, 10, 0}, {13, 0, 0}, {13, 10, 0}, {13, 59, 0}};//13:59 "sa prinda elevii conventia"
 //int ringingTime[][3]={{21,30,00},{21,32,0}};
 int ringingCount = 12;
-int RtcYear = 0;
-int RtcHour = 0;
-int RtcMinute = 0;
-int RtcSecond = 0;
-int RtcMonth = 0;
-int RtcDay = 0;
-int RtcDayOfWeek = 0;
+
 int isInProgrammingMode = 0;
 int programmingStep = 0;
 int wasTimeModified = 0;
@@ -28,18 +24,25 @@ byte bcdToDec(byte val)
 {
   return ( (val / 16 * 10) + (val % 16) );
 }
-int d0 = 5;
-int d1 = 8;
-int d2 = 7;
-int d3 =6;
-int firstCharcter = 2;
-int secondCharcter = 3;
-int thirdCharcter = 4;
+int latch = 2;
+int d0 = A4;
+int d1 = 4;
+int d2 = 3;
+int d3 = A5;
+int firstCharcter = 6;
+int secondCharcter = 7;
+int thirdCharcter = 8;
 char numbersInBinary[][4] = {"0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", "1000", "1001"};
+
+Clock clock;
+
 void setup() {
+  clock.InitClock(CS);
+
   pinMode(firstCharcter, OUTPUT);
   pinMode(secondCharcter, OUTPUT);
   pinMode(thirdCharcter, OUTPUT);
+  pinMode(latch, OUTPUT);
   pinMode(d0, OUTPUT);
   pinMode(d1, OUTPUT);
   pinMode(d2, OUTPUT);
@@ -47,33 +50,18 @@ void setup() {
   digitalWrite(firstCharcter, HIGH);
   digitalWrite(secondCharcter, HIGH);
   digitalWrite(thirdCharcter, HIGH);
-  Wire.begin();
+  digitalWrite(latch, LOW);
+
   pinMode(MODE_CHANGE_BUTTON, INPUT_PULLUP);
   pinMode(VALUE_CHANGE_BUTTON, INPUT_PULLUP);
+
+
+
+
+
   pinMode(RELAY_PIN, OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   Serial.begin(9600);
-}
-void updateTimeDate()
-{
-  Wire.beginTransmission(DS3231_I2C_ADDRESS);
-  Wire.write(0); // set DS3231 register pointer to 00h
-  Wire.endTransmission();
-  Wire.requestFrom(DS3231_I2C_ADDRESS, 7);
-  // request seven bytes of data from DS3231 starting from register 00h
-  RtcSecond = bcdToDec(Wire.read() & 0x7f);
-  RtcMinute = bcdToDec(Wire.read());
-  RtcHour = bcdToDec(Wire.read() & 0x3f);
-  RtcDayOfWeek = bcdToDec(Wire.read());
-  RtcDay = bcdToDec(Wire.read());
-  RtcMonth = bcdToDec(Wire.read());
-  RtcYear = bcdToDec(Wire.read());
-  if (isOraVara(RtcMonth, RtcDay, RtcDayOfWeek))
-  {
-    RtcHour++;
-    if (RtcHour == 24)
-      RtcHour = 0;
-  }
 }
 void printOneNumber(int number)
 {
@@ -81,6 +69,9 @@ void printOneNumber(int number)
   digitalWrite(d1, numbersInBinary[number][2] - 48);
   digitalWrite(d2, numbersInBinary[number][1] - 48);
   digitalWrite(d3, numbersInBinary[number][0] - 48);
+
+  digitalWrite(latch, LOW);
+  digitalWrite(latch, HIGH);
 }
 void printCharacter(char c)
 {
@@ -122,16 +113,18 @@ void printText(char text[])
 {
   printCharacter(text[0]);
   digitalWrite(firstCharcter, LOW);
-  delay(DISPLAY_REFRESH_RATE);
-  digitalWrite(firstCharcter, HIGH);
+  delayMicroseconds(DISPLAY_REFRESH_RATE);
   printCharacter(text[1]);
+  digitalWrite(firstCharcter, HIGH);
+
   digitalWrite(secondCharcter, LOW);
   printCharacter(text[1]);
-  delay(DISPLAY_REFRESH_RATE);
-  digitalWrite(secondCharcter, HIGH);
+  delayMicroseconds(DISPLAY_REFRESH_RATE);
   printCharacter(text[2]);
+  digitalWrite(secondCharcter, HIGH);
+
   digitalWrite(thirdCharcter, LOW);
-  delay(DISPLAY_REFRESH_RATE);
+  delayMicroseconds(DISPLAY_REFRESH_RATE);
   digitalWrite(thirdCharcter, HIGH);
 }
 void printNumber(int number)
@@ -142,39 +135,7 @@ void printNumber(int number)
   text[0] = number / 100 % 10 + 48;
   printText(text);
 }
-bool isOraVara(int month, int day, int dayOfWeek)
-{
-  bool isOraVara = false;
-  if (month > 3 && month < 10)
-  {
-    isOraVara = true;
-  }
-  else if (month == 3)
-  {
-    isOraVara = false;
-    if (day > 24)
-    {
-      isOraVara = true;
-      if (day + (7 - dayOfWeek) <= 31)
-      {
-        isOraVara = false;
-      }
-    }
-  }
-  else if (month == 10)
-  {
-    isOraVara = true;
-    if (day > 24)
-    {
-      isOraVara = false;
-      if (day + (7 - dayOfWeek) <= 31)
-      {
-        isOraVara = true;
-      }
-    }
-  }
-  return isOraVara;
-}
+
 void Ring()
 {
   digitalWrite(RELAY_PIN, HIGH);
@@ -183,7 +144,7 @@ void Ring()
 }
 void displayTime()
 {
-  if (isOraVara(RtcMonth, RtcDay, RtcDayOfWeek))
+  if (clock.IsOraVara(clock.GetMonth(), clock.GetDay(), clock.GetDayOfWeek()))
   {
     Serial.print("ora vara ");
   }
@@ -191,146 +152,81 @@ void displayTime()
   {
     Serial.print("ora iarna ");
   }
-  Serial.print(RtcHour);
+  Serial.print(clock.GetHour());
   Serial.print(":");
-  Serial.print(RtcMinute);
+  Serial.print(clock.GetMinute());
   Serial.print(":");
-  Serial.print(RtcSecond);
+  Serial.print(clock.GetSecond());
   Serial.print(" ");
-  Serial.print(RtcDay);
+  Serial.print(clock.GetDay());
   Serial.print("/");
-  Serial.print(RtcMonth);
+  Serial.print(clock.GetMonth());
   Serial.print("/");
-  Serial.print(RtcYear);
+  Serial.print(clock.GetYear());
   Serial.print(" ");
-  Serial.println(RtcDayOfWeek);
+  Serial.println(clock.GetDayOfWeek());
 
 }
-int *getProgramWizardValue(int progStep)
+int getProgramWizardValue(int progStep)
 {
   switch (progStep)
   {
     case 0:
-      return &RtcYear;
+      return clock.GetYear();
       break;
     case 1:
-      return &RtcMonth;
+      return clock.GetMonth();
       break;
     case 2:
-      return &RtcDay;
+      return clock.GetDay();
       break;
     case 3:
-      return &RtcDayOfWeek;
+      return clock.GetHour();
       break;
     case 4:
-      return &RtcHour;
+      return clock.GetMinute();
       break;
     case 5:
-      return &RtcMinute;
-      break;
-    case 6:
-      return &RtcSecond;
+      return clock.GetSecond();
       break;
   }
 }
-int getMaximValueForProgramming(int progStep)
-{
-  switch (progStep)
-  {
-    case 0:
-      return 100;
-      break;
-    case 1:
-      return 12;
-      break;
-    case 2:
-      return 31;
-      break;
-    case 3:
-      return 7;
-      break;
-    case 4:
-      return 23;
-      break;
-    case 5:
-      return 59;
-      break;
-    case 6:
-      return 59;
-      break;
-  }
-}
-int getMinimValueForProgramming(int progStep)
-{
-  switch (progStep)
-  {
-    case 0:
-      return 1;
-      break;
-    case 1:
-      return 1;
-      break;
-    case 2:
-      return 1;
-      break;
-    case 3:
-      return 0;
-      break;
-    case 4:
-      return 0;
-      break;
-    case 5:
-      return 0;
-      break;
-    case 6:
-      return 0;
-      break;
-  }
-}
-void setDS3232Time(byte second, byte minute, byte hour, byte dayOfWeek, byte
-                   dayOfMonth, byte month, byte year)
-{
-  // sets time and date data to DS3231
-  Wire.beginTransmission(DS3231_I2C_ADDRESS);
-  Wire.write(0); // set next input to start at the seconds register
-  Wire.write(decToBcd(second)); // set seconds
-  Wire.write(decToBcd(minute)); // set minutes
-  if (isOraVara(RtcMonth, RtcDay, RtcDayOfWeek))
-  {
-    if (hour > 0)
-      hour--;
-    else
-      hour = 23;
-  }
-  Serial.print("hour=");
-  Serial.println(hour);
-  Wire.write(decToBcd(hour)); // set hours
-  Wire.write(decToBcd(dayOfWeek)); // set day of week (1=Sunday, 7=Saturday)
-  Wire.write(decToBcd(dayOfMonth)); // set date (1 to 31)
-  Wire.write(decToBcd(month)); // set month
-  Wire.write(decToBcd(year)); // set year (0 to 99)
-  Wire.endTransmission();
-}
+
 void programWizard(int progStep)
 {
   int toDisplay ;
-  toDisplay = *getProgramWizardValue(progStep);
+  toDisplay = getProgramWizardValue(progStep);
   toDisplay = progStep * 100 + toDisplay;
   printNumber(toDisplay);
 }
 void programWizardValueIncremented(int progStep, int step)
 {
-  int *value = getProgramWizardValue(progStep);
-  *value = *value + step;
-  if (*value > getMaximValueForProgramming(progStep))
-    *value = getMinimValueForProgramming(progStep);
-  if (*value < getMinimValueForProgramming(progStep))
-    *value = getMinimValueForProgramming(progStep);
+  switch (progStep)
+  {
+    case 0:
+      clock.IncrementYear();
+      break;
+    case 1:
+      clock.IncrementMonth();
+      break;
+    case 2:
+      clock.IncrementDay();
+      break;
+    case 3:
+      clock.IncrementHour();
+      break;
+    case 4:
+      clock.IncrementMinute();
+      break;
+    case 5:
+      clock.IncrementSecond();
+      break;
+  }
 }
 void programMode()
 {
   if (wasTimeModified == 0)
-    updateTimeDate();
+    clock.UpdateTimeDate();
   displayTime();
   if (digitalRead(VALUE_CHANGE_BUTTON) == 0)
   {
@@ -346,11 +242,11 @@ void programMode()
   {
     consecutiveIncrementsCount = 0;
   }
-  if (programmingStep < 7)
+  if (6 > programmingStep)
     programWizard(programmingStep);
   else
   {
-    setDS3232Time(RtcSecond, RtcMinute, RtcHour, RtcDayOfWeek, RtcDay, RtcMonth, RtcYear);
+    clock.SetTime();
     programmingStep = 0;
     isInProgrammingMode = 0;
     wasTimeModified = 0;
@@ -364,7 +260,7 @@ void checkProgramModeButtons()
     {
       Serial.println("program init");
       int count = 0;
-      while (count++ < 500)
+      while (count++ < 100)
       {
         printText("888");
       }
@@ -391,16 +287,18 @@ void loop()
   }
   else
   {
-    updateTimeDate();
+    clock.UpdateTimeDate();
     displayTime();
-    if (RtcDayOfWeek == 6 || RtcDayOfWeek == 7)
+    if (clock.GetDayOfWeek() == 6 || clock.GetDayOfWeek() == 7)
     {
       //delay(100000);
       return;
     }
     for (int i = 0; i < ringingCount; ++i)
     {
-      if (RtcHour == ringingTime[i][0] && RtcMinute == ringingTime[i][1] && RtcSecond >= ringingTime[i][2] - 1 && RtcSecond <= ringingTime[i][2] + 1)
+      if (clock.GetHour() == ringingTime[i][0] &&
+          clock.GetMinute() == ringingTime[i][1] &&
+          clock.GetSecond() >= ringingTime[i][2] - 1 && clock.GetSecond() <= ringingTime[i][2] + 1)
       {
         Serial.println("Sun");
         Ring();
