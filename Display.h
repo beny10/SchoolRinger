@@ -15,6 +15,14 @@ public:
 
 	void PrintDigit(int number);
 	void PrintNumber(int number);
+
+	void TurnOn();
+	void TurnOff();
+	bool IsTimerOn();
+
+	void TimerEvent();
+
+	unsigned long GetTotalTimerTicks();
 private:
 	char _d0;
 	char _d1;
@@ -26,4 +34,10 @@ private:
 	char _thirdCharacter;
 
 	char _latch;
+
+	char _isDisplayOn;
+	char _displayContent[3];
+	char _currentChar;
+
+	unsigned long _timerTicks;
 };

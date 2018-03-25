@@ -56,8 +56,11 @@ void Display::PrintDigit(int number)
 
 void Display::PrintNumber(int number)
 {
+	_displayContent[0] = (number / 100) % 10;
+	_displayContent[1] = (number / 10) % 10;
+	_displayContent[2] = number % 10;
 
-
+/*
 	//first digit
 	PrintDigit((number / 100) % 10);
 	digitalWrite(_firstCharacter, LOW);
@@ -75,5 +78,64 @@ void Display::PrintNumber(int number)
 	digitalWrite(_thirdCharacter, LOW);
 	delayMicroseconds(DISPLAY_REFRESH_RATE);
 
+	digitalWrite(_thirdCharacter, HIGH);*/
+}
+
+void Display::TurnOn()
+{
+	_isDisplayOn = 1;
+}
+
+void Display::TurnOff()
+{
+	_isDisplayOn = 0;
+
+	digitalWrite(_firstCharacter, HIGH);
+	digitalWrite(_secondCharacter, HIGH);
 	digitalWrite(_thirdCharacter, HIGH);
+}
+	
+
+bool Display::IsTimerOn()
+{
+	return (0 != (TIMSK0 & (1 << OCIE0A)));
+}
+
+
+void Display::TimerEvent()
+{
+	if (!_isDisplayOn)
+		return;
+
+	switch (_currentChar)
+	{
+	case 0:
+		digitalWrite(_firstCharacter, LOW);
+		digitalWrite(_thirdCharacter, HIGH);
+		break;
+	case 1:
+		digitalWrite(_firstCharacter, HIGH);
+		digitalWrite(_secondCharacter, LOW);
+		break;
+	case 2:
+		digitalWrite(_secondCharacter, HIGH);
+		digitalWrite(_thirdCharacter, LOW);
+		break;
+	}
+
+	PrintDigit(_displayContent[_currentChar]);
+
+	_currentChar++;
+	//ensure not bigger than 2
+	if (0 == (0b11 ^ _currentChar))
+	{
+		_currentChar = 0;
+	}
+
+	_timerTicks++;
+}
+
+unsigned long Display::GetTotalTimerTicks()
+{
+	return _timerTicks;
 }

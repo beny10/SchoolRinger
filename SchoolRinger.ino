@@ -1,5 +1,6 @@
-#include "Display.h"
+
 #include "Clock.h"
+#include "Timer.h"
 #define DS3231_I2C_ADDRESS 0x68
 #define DISPLAY_REFRESH_RATE 5000
 #define MODE_CHANGE_BUTTON A2
@@ -15,15 +16,10 @@ int isInProgrammingMode = 0;
 int programmingStep = 0;
 int wasTimeModified = 0;
 int consecutiveIncrementsCount = 0;
-byte decToBcd(byte val)
-{
-  return ( (val / 10 * 16) + (val % 10) );
-}
-// Convert binary coded decimal to normal decimal numbers
-byte bcdToDec(byte val)
-{
-  return ( (val / 16 * 10) + (val % 16) );
-}
+
+#define MODE_BUTTON_INTERVAL 100 //for 0.8 sec
+unsigned long lastButtonModePress = 0;
+
 #define LATCH 2
 #define D0 A4
 #define D1 4
@@ -37,11 +33,15 @@ byte bcdToDec(byte val)
 
 Clock clock(CS);
 Display display(D0, D1, D2, D3, FIRST_CHARACTER, SECOND_CHARACTER, THIRD_CHARACTER, LATCH);
+Timer timer;
 
 
 void setup() {
 
   clock.InitClock();
+  timer.SetTimer();
+  timer.TurnOn();
+  display.TurnOff();
   pinMode(MODE_CHANGE_BUTTON, INPUT_PULLUP);
   pinMode(VALUE_CHANGE_BUTTON, INPUT_PULLUP);
 
@@ -56,7 +56,7 @@ void setup() {
 void Ring()
 {
   digitalWrite(RELAY_PIN, HIGH);
-  delay(SOUND_INTERVAL);
+  timer.Delay(SOUND_INTERVAL);
   digitalWrite(RELAY_PIN, LOW);
 }
 void displayTime()
@@ -151,9 +151,9 @@ void programMode()
     programWizardValueIncremented(programmingStep, 1);
     wasTimeModified = 1;
     if (consecutiveIncrementsCount++ < 10)
-      delay(500);
+      timer.Delay(500);
     else
-      delay(200);
+      timer.Delay(200);
   }
   else
   {
@@ -167,37 +167,42 @@ void programMode()
     programmingStep = 0;
     isInProgrammingMode = 0;
     wasTimeModified = 0;
+
+    display.TurnOff();
   }
 }
+
 void checkProgramModeButtons()
 {
-  if (digitalRead(MODE_CHANGE_BUTTON) == 0)
+  if ((digitalRead(MODE_CHANGE_BUTTON) == 0))
   {
     if (isInProgrammingMode == 0)
     {
+      display.TurnOn();
       Serial.println("program init");
-      int count = 0;
-      while (count++ < 100)
-      {
-        display.PrintNumber(888);
-      }
-      delay(1000);
+
+      display.PrintNumber(888);
+      timer.TurnOn();
+      timer.Delay(1000);
+
+
       Serial.println("mode");
       isInProgrammingMode = 1;
       programmingStep = 0;
       wasTimeModified = 0;
+
+
     }
     else
     {
       Serial.println("modeChanged");
       programmingStep++;
-      delay(1000);
+      timer.Delay(500);
     }
   }
-}
+}int valp = 0;
 void loop()
 {
-
   checkProgramModeButtons();
   if (isInProgrammingMode == 1)
   {
@@ -222,8 +227,18 @@ void loop()
         Ring();
       }
     }
-    delay(1000);
+    timer.SetTimer();
+    display.TurnOn();
+    timer.TurnOn();
+    display.PrintNumber(valp++);
+    timer.Delay2(100, display);
   }
+}
+
+ISR(TIMER0_COMPA_vect) { //timer0 interrupt 2kHz toggles pin 8
+  //generates pulse wave of frequency 2kHz/2 = 1kHz (takes two cycles for full wave- toggle high then toggle low)
+  timer.TimerEvent();
+  display.TimerEvent();
 }
 
 
